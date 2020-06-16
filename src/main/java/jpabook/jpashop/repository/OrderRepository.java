@@ -1,7 +1,12 @@
 package jpabook.jpashop.repository;
 
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jpabook.jpashop.domain.Member;
 import jpabook.jpashop.domain.Order;
+import jpabook.jpashop.domain.QMember;
+import jpabook.jpashop.domain.QOrder;
+import jpabook.jpashop.domain.enums.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
@@ -36,7 +41,6 @@ public class OrderRepository {
                 .getResultList();
     }
 
-
     public List<Order> findAllByString(OrderSearch orderSearch) { //language=JPAQL
         String jpql = "select o From Order o join o.member m";
         boolean isFirstCondition = true;
@@ -70,7 +74,6 @@ public class OrderRepository {
         return query.getResultList();
     }
 
-
     public List<Order> findAllByCriteria(OrderSearch orderSearch) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Order> cq = cb.createQuery(Order.class);
@@ -95,6 +98,29 @@ public class OrderRepository {
         TypedQuery<Order> query = em.createQuery(cq).setMaxResults(1000); //최대 1000건
         return query.getResultList();
     }
+
+    public List<Order> findAllByQueryDsl(OrderSearch orderSearch) {
+        JPAQueryFactory query = new JPAQueryFactory(em);
+        QOrder order = QOrder.order;
+        QMember member = QMember.member;
+
+        return query
+                .select(order)
+                .from(order)
+                .join(order.member, member)
+                .where(statusEq(orderSearch.getOrderStatus()), nameLike(orderSearch.getMemberName()))
+                .limit(1000)
+                .fetch();
+    }
+
+    private BooleanExpression nameLike(String memberName) {
+        return memberName == null ? null : QMember.member.name.like(memberName);
+    }
+
+    private BooleanExpression statusEq(OrderStatus orderStatus) {
+        return orderStatus == null ? null : QOrder.order.orderStatus.eq(orderStatus);
+    }
+
 
     public List<Order> findAllWithMemberDelivery() {
         return em.createQuery("select o from Order o" +
