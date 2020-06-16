@@ -1,10 +1,7 @@
 package jpabook.jpashop.domain;
 
 import jpabook.jpashop.domain.enums.DeliveryStatus;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 
@@ -14,6 +11,7 @@ import static javax.persistence.FetchType.*;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Delivery {
 
     @Id @GeneratedValue

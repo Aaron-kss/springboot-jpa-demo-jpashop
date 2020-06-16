@@ -1,14 +1,13 @@
 package jpabook.jpashop.domain;
 
+import jpabook.jpashop.domain.enums.DeliveryStatus;
 import jpabook.jpashop.domain.enums.OrderStatus;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static javax.persistence.CascadeType.*;
@@ -17,8 +16,9 @@ import static javax.persistence.FetchType.*;
 @Entity
 @Table(name = "orders")
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
+@Builder
 public class Order {
 
     @Id @GeneratedValue
@@ -30,6 +30,7 @@ public class Order {
     private Member member;
 
     @OneToMany(mappedBy = "order", cascade = ALL)
+    @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @OneToOne(fetch = LAZY, cascade = ALL)
@@ -47,7 +48,7 @@ public class Order {
         member.getOrders().add(this);
     }
 
-    public void setOrderItem(OrderItem orderItem){
+    public void addOrderItem(OrderItem orderItem){
         orderItem.setOrder(this);
         this.orderItems.add(orderItem);
     }
@@ -55,5 +56,51 @@ public class Order {
     public void setDelivery(Delivery delivery){
         this.delivery = delivery;
         delivery.setOrder(this);
+    }
+
+    //==생성 메서드==//
+
+    /**
+     * 주문생성
+     * @param member
+     * @param delivery
+     * @param orderItems
+     * @return
+     */
+    public static Order createOrder(Member member, Delivery delivery, OrderItem... orderItems){
+
+        Order order = Order.builder()
+                .orderStatus(OrderStatus.ORDER)
+                .orderDate(LocalDateTime.now())
+                .build();
+
+        order.setMember(member);
+        order.setDelivery(delivery);
+
+        for(OrderItem orderItem: orderItems) {
+            order.addOrderItem(orderItem);
+        }
+
+        return order;
+    }
+
+    /**
+     * 주문 취소
+     */
+    public void cancel(){
+        if(delivery.getDeliveryStatus() == DeliveryStatus.COMP){
+            throw new IllegalStateException("이미 배송 완료된 상품은 취소가 불가능 합니다.");
+        }
+        this.orderStatus = OrderStatus.CANCEL;
+        this.getOrderItems().forEach(OrderItem::cancel);
+    }
+
+    //==조회 로직==//
+    /**
+     * 전제 주문 가격 조회
+     */
+
+    public int getTotalPrice(){
+        return this.orderItems.stream().mapToInt(OrderItem::getTotalPrice).sum();
     }
 }
